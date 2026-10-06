@@ -43,7 +43,6 @@
       gap: 16px;
     }
 
-    /* ヘッダー */
     header {
       display: flex;
       justify-content: space-between;
@@ -81,7 +80,6 @@
       box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
     }
 
-    /* 検索バー */
     .search-box {
       position: relative;
       width: 100%;
@@ -104,7 +102,6 @@
       color: var(--text-muted);
     }
 
-    /* タグフィルターバー & ＋追加ボタン */
     .tag-scroll-container {
       display: flex;
       gap: 8px;
@@ -141,7 +138,6 @@
       gap: 4px;
     }
 
-    /* 合計カード */
     .summary-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -171,11 +167,36 @@
       color: var(--text);
     }
 
-    /* 記録カードリスト */
+    /* 日付グループ表示 */
+    .date-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .date-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 4px 2px;
+      border-bottom: 1px solid #2c2c2e;
+    }
+    .date-group-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.3px;
+    }
+    .date-group-sub {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
     .log-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
     }
     .log-card {
       background: var(--card-bg);
@@ -185,6 +206,10 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      cursor: pointer;
+    }
+    .log-card:active {
+      background: #252528;
     }
     .log-card-header {
       display: flex;
@@ -227,7 +252,12 @@
       color: #8e8e93;
       font-variant-numeric: tabular-nums;
     }
-    .btn-delete {
+    .log-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-action-icon {
       background: none;
       border: none;
       color: #636366;
@@ -236,11 +266,13 @@
       display: flex;
       align-items: center;
     }
+    .btn-action-icon:active {
+      color: var(--primary);
+    }
     .btn-delete:active {
       color: var(--danger);
     }
 
-    /* モーダル */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -347,16 +379,13 @@
     </div>
   </header>
 
-  <!-- 検索バー -->
   <div class="search-box">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
     <input type="text" id="searchInput" placeholder="作業内容やメモを検索..." oninput="renderLogs()">
   </div>
 
-  <!-- タグフィルター＆追加ボタン -->
   <div class="tag-scroll-container" id="tagFilterContainer"></div>
 
-  <!-- 今日の集計カード -->
   <div class="summary-card">
     <div>
       <div class="summary-label">本日の合計作業時間</div>
@@ -368,19 +397,18 @@
     </div>
   </div>
 
-  <!-- 記録リスト -->
   <div class="log-list" id="logListContainer"></div>
 </div>
 
-<!-- 新規記録追加モーダル（過去日付指定対応） -->
 <div class="modal-overlay" id="addModal" onclick="closeModalOnOut(event)">
   <div class="modal-card">
     <div class="modal-header">
-      <span class="modal-title">作業を記録</span>
+      <span class="modal-title" id="modalHeaderTitle">作業を記録</span>
       <button class="btn-close" onclick="closeAddModal()">キャンセル</button>
     </div>
 
-    <!-- 作業日時指定（別の日・過去の作業追加） -->
+    <input type="hidden" id="editLogId" value="">
+
     <div class="form-group">
       <span class="form-label">作業日時（過去の日付も選択可能）</span>
       <input type="datetime-local" class="form-input" id="inputDateTime">
@@ -406,7 +434,7 @@
       <input type="text" class="form-input" id="inputMemo" placeholder="備考、担当者、留意事項など">
     </div>
 
-    <button class="btn-submit" onclick="saveNewLog()">保存する</button>
+    <button class="btn-submit" id="btnSubmitText" onclick="saveLog()">保存する</button>
   </div>
 </div>
 
@@ -416,13 +444,7 @@
   const STORAGE_KEY_TAGS = 'worklog_custom_tags_v1';
 
   let customTags = JSON.parse(localStorage.getItem(STORAGE_KEY_TAGS)) || DEFAULT_TAGS;
-  let workLogs = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || [
-    { id: 1, tag: 'その他', title: '健康診断', memo: '', duration: 60, timestamp: '2026-09-07T09:15:00' },
-    { id: 2, tag: 'その他', title: '発酵室掃除水タンク内掃除（休日出勤）ポンプ周り清掃', memo: '川崎さんと自分はポンプ周り清掃（10時頃終わり）', duration: 120, timestamp: '2026-09-05T12:01:00' },
-    { id: 3, tag: 'その他', title: '発酵室清掃準備', memo: '明日の発酵室清掃準備', duration: 30, timestamp: '2026-09-04T17:19:00' },
-    { id: 4, tag: '焼酎', title: 'ジャガイモ焼酎移動', memo: '', duration: 60, timestamp: '2026-09-04T12:12:00' },
-    { id: 5, tag: '焼酎', title: '逆洗浄', memo: '', duration: 60, timestamp: '2026-09-04T12:12:00' }
-  ];
+  let workLogs = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || [];
 
   let currentFilter = 'すべて';
   let selectedModalTag = customTags[0] || 'その他';
@@ -493,12 +515,35 @@
     });
   }
 
+  function formatDateGroupHeader(dateKey) {
+    const today = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayKey = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
+
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const targetDate = new Date(y, m - 1, d);
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    const dayStr = days[targetDate.getDay()];
+
+    if (dateKey === todayKey) {
+      return `今日 (${m}月${d}日 · ${dayStr})`;
+    } else if (dateKey === yesterdayKey) {
+      return `昨日 (${m}月${d}日 · ${dayStr})`;
+    } else {
+      return `${m}月${d}日 (${dayStr})`;
+    }
+  }
+
   function renderLogs() {
     const container = document.getElementById('logListContainer');
     const query = document.getElementById('searchInput').value.toLowerCase();
     container.innerHTML = '';
 
-    // 日付順（新しい順）にソート
+    // 日時降順（新しい順）
     workLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     const filtered = workLogs.filter(item => {
@@ -509,12 +554,10 @@
 
     document.getElementById('logCount').textContent = `${filtered.length} 件`;
 
-    // 「今日の日付」の作業時間のみ集計
+    // 本日の合計作業時間を計算
     const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, '0');
-    const d = String(today.getDate()).padStart(2, '0');
-    const todayPrefix = `${y}-${m}-${d}`;
+    const pad = n => String(n).padStart(2, '0');
+    const todayPrefix = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
     const todayMinutes = workLogs
       .filter(i => (i.timestamp || '').startsWith(todayPrefix))
@@ -523,29 +566,71 @@
     const mins = todayMinutes % 60;
     document.getElementById('todayTotalTime').textContent = `${hours}時間 ${mins}分`;
 
+    // 日付ごとにグループ化
+    const groups = {};
     filtered.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'log-card';
-
       const dt = new Date(item.timestamp);
-      const timeStr = isNaN(dt.getTime()) ? '' : `${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
-      const durationStr = item.duration >= 60 ? `${item.duration / 60}時間` : `${item.duration}分`;
+      const dateKey = isNaN(dt.getTime())
+        ? 'その他'
+        : `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(item);
+    });
 
-      card.innerHTML = `
-        <div class="log-card-header">
-          <span class="log-tag-badge">${escapeHtml(item.tag)}</span>
-          <span class="log-duration">${durationStr}</span>
-        </div>
-        <div class="log-title">${escapeHtml(item.title)}</div>
-        ${item.memo ? `<div class="log-memo">${escapeHtml(item.memo)}</div>` : ''}
-        <div class="log-card-footer">
-          <span class="log-timestamp">${timeStr}</span>
-          <button class="btn-delete" onclick="deleteLog(${item.id})">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
-        </div>
+    // グループを描画
+    Object.keys(groups).forEach(dateKey => {
+      const items = groups[dateKey];
+      const dayTotalMinutes = items.reduce((sum, cur) => sum + (parseInt(cur.duration) || 0), 0);
+      const dHours = Math.floor(dayTotalMinutes / 60);
+      const dMins = dayTotalMinutes % 60;
+      const dayTimeStr = dHours > 0 ? `${dHours}時間${dMins > 0 ? ` ${dMins}分` : ''}` : `${dMins}分`;
+
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'date-group';
+
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'date-group-header';
+      headerDiv.innerHTML = `
+        <span class="date-group-title">${formatDateGroupHeader(dateKey)}</span>
+        <span class="date-group-sub">計 ${dayTimeStr} (${items.length}件)</span>
       `;
-      container.appendChild(card);
+      groupDiv.appendChild(headerDiv);
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'log-card';
+        card.onclick = (e) => {
+          if (e.target.closest('button')) return;
+          openEditModal(item.id);
+        };
+
+        const dt = new Date(item.timestamp);
+        const timeStr = isNaN(dt.getTime()) ? '' : `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        const durationStr = item.duration >= 60 ? `${item.duration / 60}時間` : `${item.duration}分`;
+
+        card.innerHTML = `
+          <div class="log-card-header">
+            <span class="log-tag-badge">${escapeHtml(item.tag)}</span>
+            <span class="log-duration">${durationStr}</span>
+          </div>
+          <div class="log-title">${escapeHtml(item.title)}</div>
+          ${item.memo ? `<div class="log-memo">${escapeHtml(item.memo)}</div>` : ''}
+          <div class="log-card-footer">
+            <span class="log-timestamp">開始時刻: ${timeStr}</span>
+            <div class="log-actions">
+              <button class="btn-action-icon" title="編集" onclick="openEditModal(${item.id})">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              </button>
+              <button class="btn-action-icon btn-delete" title="削除" onclick="deleteLog(${item.id})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        `;
+        groupDiv.appendChild(card);
+      });
+
+      container.appendChild(groupDiv);
     });
   }
 
@@ -562,23 +647,50 @@
   }
 
   function openAddModal() {
+    document.getElementById('editLogId').value = '';
+    document.getElementById('modalHeaderTitle').textContent = '作業を記録';
+    document.getElementById('btnSubmitText').textContent = '保存する';
+    document.getElementById('inputTitle').value = '';
+    document.getElementById('inputDuration').value = '60';
+    document.getElementById('inputMemo').value = '';
+    selectedModalTag = customTags[0] || 'その他';
     renderModalTags();
-    // 日時の初期値を「現在日時」にセット
     document.getElementById('inputDateTime').value = getLocalIsoString(new Date());
     document.getElementById('addModal').style.display = 'flex';
   }
+
+  function openEditModal(id) {
+    const target = workLogs.find(i => i.id === id);
+    if (!target) return;
+
+    document.getElementById('editLogId').value = target.id;
+    document.getElementById('modalHeaderTitle').textContent = '作業内容を編集';
+    document.getElementById('btnSubmitText').textContent = '更新する';
+    document.getElementById('inputTitle').value = target.title;
+    document.getElementById('inputDuration').value = target.duration;
+    document.getElementById('inputMemo').value = target.memo || '';
+    selectedModalTag = target.tag;
+    renderModalTags();
+
+    const dt = new Date(target.timestamp);
+    document.getElementById('inputDateTime').value = isNaN(dt.getTime()) ? getLocalIsoString(new Date()) : getLocalIsoString(dt);
+    document.getElementById('addModal').style.display = 'flex';
+  }
+
   function closeAddModal() {
     document.getElementById('addModal').style.display = 'none';
   }
+
   function closeModalOnOut(e) {
     if (e.target.id === 'addModal') closeAddModal();
   }
 
-  function saveNewLog() {
+  function saveLog() {
     const title = document.getElementById('inputTitle').value.trim();
     const duration = parseInt(document.getElementById('inputDuration').value) || 30;
     const memo = document.getElementById('inputMemo').value.trim();
     const inputDt = document.getElementById('inputDateTime').value;
+    const editId = document.getElementById('editLogId').value;
 
     if (!title) {
       alert('作業タイトルを入力してください');
@@ -587,20 +699,28 @@
 
     const timestamp = inputDt ? new Date(inputDt).toISOString() : new Date().toISOString();
 
-    const newRecord = {
-      id: Date.now(),
-      tag: selectedModalTag,
-      title: title,
-      memo: memo,
-      duration: duration,
-      timestamp: timestamp
-    };
+    if (editId) {
+      const idx = workLogs.findIndex(i => String(i.id) === String(editId));
+      if (idx !== -1) {
+        workLogs[idx].tag = selectedModalTag;
+        workLogs[idx].title = title;
+        workLogs[idx].duration = duration;
+        workLogs[idx].memo = memo;
+        workLogs[idx].timestamp = timestamp;
+      }
+    } else {
+      const newRecord = {
+        id: Date.now(),
+        tag: selectedModalTag,
+        title: title,
+        memo: memo,
+        duration: duration,
+        timestamp: timestamp
+      };
+      workLogs.unshift(newRecord);
+    }
 
-    workLogs.unshift(newRecord);
     localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(workLogs));
-
-    document.getElementById('inputTitle').value = '';
-    document.getElementById('inputMemo').value = '';
     closeAddModal();
     renderLogs();
   }
